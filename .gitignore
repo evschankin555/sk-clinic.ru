@@ -1,0 +1,75 @@
+# WordPress .gitignore
+
+
+# IDE / Editor
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+
+
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+
+# WordPress Core (не коммитим ядро)
+/wp-admin/
+/wp-includes/
+/wp-*.php
+/index.php
+/license.txt
+/readme.html
+/xmlrpc.php
+
+# WP Content - коммитим только кастомные темы и плагины
+/wp-content/uploads/
+/wp-content/upgrade/
+/wp-content/backup-db/
+/wp-content/backups/
+/wp-content/blogs.dir/
+/wp-content/cache/
+/wp-content/advanced-cache.php
+/wp-content/wp-cache-config.php
+
+# WP Config
+wp-config.php
+.htaccess
+
+# Plugins - можно добавить исключения для своих
+/wp-content/plugins/
+!/wp-content/plugins/your-custom-plugin/
+
+# Themes - можно добавить исключения для своих
+/wp-content/themes/
+!/wp-content/themes/your-custom-theme/
+
+# Logs
+debug.log
+*.log
+
+# Composer
+/vendor/
+composer.lock
