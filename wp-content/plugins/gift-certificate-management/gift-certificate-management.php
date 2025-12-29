@@ -290,7 +290,7 @@ function payment_status_shortcode() {
 add_shortcode('gift_certificate_management_payment_status', 'payment_status_shortcode');
 
 $gift_certificate_script_version = '1.45';
-$gift_you_script_version = '1.0';
+$gift_you_script_version = '1.1'; // Updated: 2024-12-28
 
 function gift_certificate_enqueue_scripts() {
     global $gift_certificate_script_version;

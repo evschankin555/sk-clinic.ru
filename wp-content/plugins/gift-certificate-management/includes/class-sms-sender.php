@@ -1,7 +1,7 @@
 <?php
 /**
  * Класс для отправки SMS через SMS.RU
- *
+ * Version: 1.0.1
  * Документация API: https://sms.ru/api
  */
 
