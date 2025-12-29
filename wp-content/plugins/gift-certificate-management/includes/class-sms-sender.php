@@ -12,9 +12,8 @@ class Gift_SMS_Sender {
     private $status_url = 'https://sms.ru/sms/status';
 
     public function __construct() {
-        // API ключ SMS.RU - нужно получить в личном кабинете sms.ru
-        // TODO: Вынести в настройки плагина
-        $this->api_id = get_option('gift_sms_api_key', '');
+        // API ключ SMS.RU
+        $this->api_id = get_option('gift_sms_api_key', '73ED891A-A19E-767B-AFFC-EBE6B06E4CF9');
     }
 
     /**
