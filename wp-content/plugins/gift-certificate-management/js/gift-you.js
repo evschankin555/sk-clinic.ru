@@ -1,7 +1,8 @@
 /**
  * JavaScript для формы оформления подарочного сертификата (gift-new)
- * Version: 2.0.0
+ * Version: 2.1.0
  * Интеграция с существующей вёрсткой верстальщика
+ * Поддержка тестового режима через ?test=1
  */
 
 (function() {
@@ -11,6 +12,9 @@
     if (window.location.pathname.indexOf('/gift-new') === -1) {
         return;
     }
+
+    // Проверяем тестовый режим (?test=1 в URL)
+    var isTestMode = (new URLSearchParams(window.location.search)).get('test') === '1';
 
     // Ждём загрузки DOM
     document.addEventListener('DOMContentLoaded', function() {
@@ -25,6 +29,14 @@
         }
 
         console.log('Gift-You: форма инициализирована');
+
+        // Показываем индикатор тестового режима
+        if (isTestMode) {
+            var testBadge = document.createElement('div');
+            testBadge.style.cssText = 'position: fixed; top: 10px; right: 10px; background: #ff6b6b; color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 14px; z-index: 9999; font-family: sans-serif;';
+            testBadge.textContent = 'ТЕСТОВЫЙ РЕЖИМ';
+            document.body.appendChild(testBadge);
+        }
 
         // Перехватываем отправку формы
         form.addEventListener('submit', function(e) {
@@ -197,7 +209,7 @@
             }
         }
 
-        return {
+        var formData = {
             sum: amount,
             certificate_amount: amount,
             recipient_name: recipientName,
@@ -208,6 +220,14 @@
             sender_phone: senderPhone,
             scheduled_at: scheduledAt
         };
+
+        // Добавляем флаг тестового режима если ?test=1
+        if (isTestMode) {
+            formData.test_mode = true;
+            console.log('Gift-You: ТЕСТОВЫЙ РЕЖИМ - оплата будет пропущена');
+        }
+
+        return formData;
     }
 
     /**
@@ -301,16 +321,17 @@
      */
     function showLoading() {
         // Создаём оверлей если его нет
-        let overlay = document.getElementById('gift-loading-overlay');
+        var overlay = document.getElementById('gift-loading-overlay');
+        var loadingText = isTestMode ? 'Создание тестового сертификата...' : 'Создание платежа...';
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.id = 'gift-loading-overlay';
-            overlay.innerHTML = `
-                <div style="background: #fff; padding: 30px 50px; border-radius: 16px; text-align: center; font-family: 'Tenor Sans', sans-serif;">
-                    <div style="margin-bottom: 15px; font-size: 18px;">Создание платежа...</div>
-                    <div style="border: 3px solid #f3f3f3; border-top: 3px solid #DFEBCE; border-radius: 50%; width: 40px; height: 40px; animation: gift-spin 1s linear infinite; margin: 0 auto;"></div>
-                </div>
-            `;
+            overlay.innerHTML = '\
+                <div style="background: #fff; padding: 30px 50px; border-radius: 16px; text-align: center; font-family: \'Tenor Sans\', sans-serif;">\
+                    <div style="margin-bottom: 15px; font-size: 18px;">' + loadingText + '</div>\
+                    <div style="border: 3px solid #f3f3f3; border-top: 3px solid #DFEBCE; border-radius: 50%; width: 40px; height: 40px; animation: gift-spin 1s linear infinite; margin: 0 auto;"></div>\
+                </div>\
+            ';
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center;';
 
             // Добавляем стиль анимации

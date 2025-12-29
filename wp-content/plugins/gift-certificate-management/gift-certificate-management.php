@@ -1313,6 +1313,9 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-sms-sender.php';
 
 /**
  * REST API: Создание сертификата нового типа с оплатой
+ *
+ * ТЕСТОВЫЙ РЕЖИМ: передайте test_mode: true в данных для пропуска оплаты
+ * Или откройте страницу /gift-new/?test=1
  */
 function gift_you_create_payment(WP_REST_Request $request) {
     $data = $request->get_json_params();
@@ -1320,6 +1323,9 @@ function gift_you_create_payment(WP_REST_Request $request) {
     if (!isset($data['sum']) || !isset($data['recipient_phone'])) {
         return new WP_REST_Response('Invalid request: sum and recipient_phone required', 400);
     }
+
+    // Проверяем тестовый режим
+    $is_test_mode = !empty($data['test_mode']);
 
     global $wpdb;
     $table_name = $wpdb->prefix . 'gift_certificates';
@@ -1336,6 +1342,9 @@ function gift_you_create_payment(WP_REST_Request $request) {
         $scheduled_at = date('Y-m-d H:i:s', strtotime($data['scheduled_at']));
     }
 
+    // В тестовом режиме сразу ставим статус paid
+    $initial_status = $is_test_mode ? 'paid' : 'created';
+
     // Сохраняем сертификат
     $result = $wpdb->insert(
         $table_name,
@@ -1347,7 +1356,7 @@ function gift_you_create_payment(WP_REST_Request $request) {
             'sender_name' => $data['sender_name'],
             'sender_email' => $data['sender_email'],
             'sender_phone' => $data['sender_phone'],
-            'status' => 'created',
+            'status' => $initial_status,
             'creation_time' => current_time('mysql'),
             'expiration_date' => $expiration_date,
             'user_ip' => $_SERVER['REMOTE_ADDR'],
@@ -1355,7 +1364,8 @@ function gift_you_create_payment(WP_REST_Request $request) {
             'recipient_phone' => $data['recipient_phone'],
             'scheduled_at' => $scheduled_at,
             'sms_status' => $sms_status,
-            'certificate_type' => 'new'
+            'certificate_type' => 'new',
+            'payment_id' => $is_test_mode ? 'TEST-' . $certificate_id : null
         )
     );
 
@@ -1363,7 +1373,28 @@ function gift_you_create_payment(WP_REST_Request $request) {
         return new WP_REST_Response('Error saving certificate: ' . $wpdb->last_error, 500);
     }
 
-    // Создаём платёж в YooKassa
+    // ТЕСТОВЫЙ РЕЖИМ: пропускаем оплату, сразу отправляем SMS (если не запланировано)
+    if ($is_test_mode) {
+        // Если нет запланированной даты - отправляем SMS сразу
+        if (empty($scheduled_at)) {
+            gift_you_send_sms_now($certificate_id);
+        }
+
+        return new WP_REST_Response(
+            array(
+                'test_mode' => true,
+                'payment_id' => 'TEST-' . $certificate_id,
+                'payment_url' => home_url('/gift-you/' . $short_code . '/'), // Сразу на страницу сертификата
+                'certificate_id' => $certificate_id,
+                'short_code' => $short_code,
+                'certificate_url' => home_url('/gift-you/' . $short_code . '/'),
+                'short_url' => home_url('/g/' . $short_code . '/'),
+            ),
+            200
+        );
+    }
+
+    // БОЕВОЙ РЕЖИМ: создаём платёж в YooKassa
     $client = new \YooKassa\Client();
     $client->setAuth('324277', 'live_3zAOaN0sUy0tcINqwat_kV2LXGX25A_3EIwesJaZ0Yg');
 
