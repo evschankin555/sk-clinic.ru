@@ -1,6 +1,6 @@
 /**
  * JavaScript для формы оформления подарочного сертификата (gift-new)
- * Version: 2.1.0
+ * Version: 2.2.0
  * Интеграция с существующей вёрсткой верстальщика
  * Поддержка тестового режима через ?test=1
  */
@@ -15,6 +15,19 @@
 
     // Проверяем тестовый режим (?test=1 в URL)
     var isTestMode = (new URLSearchParams(window.location.search)).get('test') === '1';
+
+    // ВАЖНО: Отключаем alert от верстальщика, который блокирует отправку
+    // Сохраняем оригинальный alert и подавляем его для сообщений о валидации
+    var originalAlert = window.alert;
+    window.alert = function(msg) {
+        // Пропускаем алерты про валидацию формы - наш код сам обрабатывает
+        if (msg && (msg.indexOf('валидна') !== -1 || msg.indexOf('Форма') !== -1)) {
+            console.log('Gift-You: подавлен alert от верстальщика:', msg);
+            return;
+        }
+        // Остальные алерты показываем
+        originalAlert.call(window, msg);
+    };
 
     // Ждём загрузки DOM
     document.addEventListener('DOMContentLoaded', function() {

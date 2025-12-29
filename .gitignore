@@ -58,8 +58,8 @@ desktop.ini
 wp-config.php
 .htaccess
 
-# Plugins - можно добавить исключения для своих
-/wp-content/plugins/
+# Plugins - игнорируем всё кроме нашего плагина
+/wp-content/plugins/*
 !/wp-content/plugins/gift-certificate-management/
 
 # Themes - можно добавить исключения для своих

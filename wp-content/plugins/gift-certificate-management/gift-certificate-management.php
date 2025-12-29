@@ -290,11 +290,9 @@ function payment_status_shortcode() {
 add_shortcode('gift_certificate_management_payment_status', 'payment_status_shortcode');
 
 $gift_certificate_script_version = '1.45';
-$gift_you_script_version = '1.1'; // Updated: 2024-12-28
 
 function gift_certificate_enqueue_scripts() {
     global $gift_certificate_script_version;
-    global $gift_you_script_version;
 
     // Старый скрипт для /gift/ страницы
     wp_enqueue_script(
@@ -305,15 +303,6 @@ function gift_certificate_enqueue_scripts() {
         true
     );
 
-    // Новый скрипт для /gift-new/ страницы
-    wp_enqueue_script(
-        'gift-you-script',
-        plugins_url('js/gift-you.js', __FILE__),
-        array('jquery'),
-        $gift_you_script_version,
-        true
-    );
-
     // Определяем ajaxurl для фронтенда
     wp_localize_script(
         'gift-certificate-script',
@@ -321,14 +310,7 @@ function gift_certificate_enqueue_scripts() {
         array( 'ajaxurl' => admin_url( 'admin-ajax.php' ) )
     );
 
-    wp_localize_script(
-        'gift-you-script',
-        'gift_you_ajax',
-        array(
-            'ajaxurl' => admin_url( 'admin-ajax.php' ),
-            'resturl' => rest_url('gift-you/v1/')
-        )
-    );
+    // Примечание: JS для новой формы [gift_you_form] встроен в шаблон templates/gift-you-form.php
 }
 add_action('wp_enqueue_scripts', 'gift_certificate_enqueue_scripts');
 function update_certificate_status(WP_REST_Request $request) {
@@ -1713,4 +1695,30 @@ function gift_you_check_sms_delivery() {
     }
 }
 add_action('gift_you_cron_send_sms', 'gift_you_check_sms_delivery');
+
+/**
+ * ============================================================
+ * ШОРТКОД [gift_you_form] - Форма оформления подарочного сертификата
+ * ============================================================
+ *
+ * Использование в Elementor: просто добавьте шорткод [gift_you_form]
+ * Для тестового режима: добавьте ?test=1 к URL страницы
+ */
+function gift_you_form_shortcode($atts) {
+    // Атрибуты шорткода (можно расширить при необходимости)
+    $atts = shortcode_atts(array(
+        'cert_image' => 'https://sk-clinic.ru/wp-content/uploads/2025/12/sert.png',
+        'payments_image' => 'https://sk-clinic.ru/wp-content/uploads/2025/12/oplata.png',
+    ), $atts, 'gift_you_form');
+
+    // Начинаем буферизацию вывода
+    ob_start();
+
+    // Подключаем шаблон формы
+    include plugin_dir_path(__FILE__) . 'templates/gift-you-form.php';
+
+    // Возвращаем содержимое буфера
+    return ob_get_clean();
+}
+add_shortcode('gift_you_form', 'gift_you_form_shortcode');
 
