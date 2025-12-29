@@ -4,7 +4,8 @@
       "Bash(dir:*)",
       "Bash(findstr:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Add gift-you system with SMS notifications\n\n- Add new gift certificate system (gift-you) with SMS delivery via SMS.RU\n- Add database migration for new fields (short_code, recipient_phone, scheduled_at, sms_status, etc.)\n- Add short URL generation for SMS (/g/{code}/)\n- Add WP-Cron for scheduled SMS sending\n- Add sender notification on delivery\n- Add new admin panel with filters and SMS send button\n- Update .gitignore to track gift-certificate-management plugin\n\nNew files:\n- includes/class-sms-sender.php - SMS.RU integration\n- templates/gift-you-template.php - Certificate page template\n- js/gift-you.js - Frontend JS for gift-new form\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Add gift-you system with SMS notifications\n\n- Add new gift certificate system (gift-you) with SMS delivery via SMS.RU\n- Add database migration for new fields (short_code, recipient_phone, scheduled_at, sms_status, etc.)\n- Add short URL generation for SMS (/g/{code}/)\n- Add WP-Cron for scheduled SMS sending\n- Add sender notification on delivery\n- Add new admin panel with filters and SMS send button\n- Update .gitignore to track gift-certificate-management plugin\n\nNew files:\n- includes/class-sms-sender.php - SMS.RU integration\n- templates/gift-you-template.php - Certificate page template\n- js/gift-you.js - Frontend JS for gift-new form\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
