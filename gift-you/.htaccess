@@ -1,0 +1,12 @@
+# Перенаправляем все запросы на index.php
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /gift-you/
+
+# Если файл или папка существует - отдаём как есть
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Все остальные запросы -> index.php
+RewriteRule ^(.*)$ index.php [L,QSA]
+</IfModule>
