@@ -1,0 +1,41 @@
+<?php return array(
+    'root' => array(
+        'name' => '__root__',
+        'pretty_version' => 'dev-master',
+        'version' => 'dev-master',
+        'reference' => '4e91783a99dd34b37cb6849c2b233f419d30297a',
+        'type' => 'library',
+        'install_path' => __DIR__ . '/../../',
+        'aliases' => array(),
+        'dev' => true,
+    ),
+    'versions' => array(
+        '__root__' => array(
+            'pretty_version' => 'dev-master',
+            'version' => 'dev-master',
+            'reference' => '4e91783a99dd34b37cb6849c2b233f419d30297a',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'psr/log' => array(
+            'pretty_version' => '1.1.4',
+            'version' => '1.1.4.0',
+            'reference' => 'd49695b909c3b7628b6289db5479a1c204601f11',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../psr/log',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'yoomoney/yookassa-sdk-php' => array(
+            'pretty_version' => '2.8.2',
+            'version' => '2.8.2.0',
+            'reference' => '80e82cc3a40e3bf59a316592b4bd7387b9aac253',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../yoomoney/yookassa-sdk-php',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+    ),
+);
