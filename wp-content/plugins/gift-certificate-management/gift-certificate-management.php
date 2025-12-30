@@ -1528,7 +1528,8 @@ function gift_you_send_sms_now($certificate_id) {
     $sms_sender = new Gift_SMS_Sender();
     $short_url = 'sk-clinic.ru/g/' . $certificate->short_code;
 
-    $message = "Вам отправили подарок! Подарочный сертификат от клиники «Секреты красоты». Доступен по ссылке: {$short_url}";
+    // Короткий текст для 1 SMS (~70 символов кириллицей)
+    $message = "Вам подарок! Сертификат клиники «Секреты красоты»: {$short_url}";
 
     $result = $sms_sender->send($certificate->recipient_phone, $message);
 
