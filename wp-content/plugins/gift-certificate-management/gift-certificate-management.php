@@ -765,19 +765,25 @@ class trueOptionsPage
                         <?php if ($is_new): ?>
                             <?php
                             $sms_status = isset($item->sms_status) ? $item->sms_status : 'none';
-                            $sms_color = $this->get_sms_status_color($sms_status);
+                            $is_scheduled = !empty($item->scheduled_at) && $sms_status === 'pending';
+
+                            // Для запланированных показываем специальный статус
+                            if ($is_scheduled) {
+                                $sms_color = '#9C27B0'; // Фиолетовый для запланированных
+                                $sms_text = '⏰ ' . date('d.m H:i', strtotime($item->scheduled_at));
+                            } else {
+                                $sms_color = $this->get_sms_status_color($sms_status);
+                                $sms_text = $this->translate_sms_status($sms_status);
+                            }
                             ?>
                             <span class="sms-status" style="background: <?= $sms_color ?>; color: #fff;">
-                                <?= $this->translate_sms_status($sms_status) ?>
+                                <?= $sms_text ?>
                             </span>
                             <?php if ($sms_status === 'pending' && $item->status === 'paid'): ?>
                             <br>
                             <button class="btn-send-sms" data-id="<?= $item->certificate_id ?>" title="Отправить SMS сейчас">
-                                Отправить
+                                <?= $is_scheduled ? 'Отправить сейчас' : 'Отправить' ?>
                             </button>
-                            <?php endif; ?>
-                            <?php if (!empty($item->scheduled_at) && $sms_status === 'pending'): ?>
-                            <br><small style="color:#999;">Запл: <?= date('d.m H:i', strtotime($item->scheduled_at)) ?></small>
                             <?php endif; ?>
                         <?php else: ?>
                             <span style="color:#999;">-</span>
