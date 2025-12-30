@@ -1602,6 +1602,9 @@ function gift_you_process_scheduled_sms() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'gift_certificates';
 
+    // Логируем запуск
+    error_log('Gift SMS Cron: Starting at ' . current_time('mysql'));
+
     // Находим сертификаты для отправки
     $certificates = $wpdb->get_results(
         "SELECT * FROM $table_name
@@ -1612,8 +1615,12 @@ function gift_you_process_scheduled_sms() {
          AND scheduled_at <= NOW()"
     );
 
+    error_log('Gift SMS Cron: Found ' . count($certificates) . ' certificates to send');
+
     foreach ($certificates as $cert) {
-        gift_you_send_sms_now($cert->certificate_id);
+        error_log('Gift SMS Cron: Sending SMS for certificate ' . $cert->certificate_id);
+        $result = gift_you_send_sms_now($cert->certificate_id);
+        error_log('Gift SMS Cron: Result - ' . ($result ? 'success' : 'failed'));
     }
 }
 
