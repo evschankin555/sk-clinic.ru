@@ -85,8 +85,8 @@ if (!$certificate) {
     exit;
 }
 
-// Форматируем данные
-$cert_number = 'GIFT №' . $certificate->certificate_id;
+// Форматируем данные - используем short_code как номер
+$cert_number = 'GIFT ' . strtoupper($certificate->short_code ?: $short_code);
 $amount = number_format($certificate->certificate_amount, 0, '', ' ');
 $recipient_name = esc_html($certificate->recipient_name ?: 'Дорогой друг');
 $message = esc_html($certificate->recipient_message ?: '');

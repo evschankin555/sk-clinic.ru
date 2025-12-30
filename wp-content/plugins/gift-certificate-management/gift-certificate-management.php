@@ -677,25 +677,36 @@ class trueOptionsPage
                 cursor: not-allowed;
             }
             .filter-buttons {
-                margin-bottom: 10px;
+                margin: 15px 0;
+                display: flex;
+                gap: 8px;
             }
-            .filter-buttons button {
-                margin-right: 5px;
-                padding: 5px 15px;
+            .filter-btn {
+                background: #f0f0f1;
+                border: 1px solid #c3c4c7;
+                border-radius: 4px;
+                padding: 6px 14px;
+                font-size: 13px;
                 cursor: pointer;
+                color: #50575e;
+                transition: all 0.15s ease;
             }
-            .filter-buttons button.active {
+            .filter-btn:hover {
+                background: #e0e0e0;
+                border-color: #999;
+            }
+            .filter-btn.active {
                 background: #90A384;
                 color: #fff;
-                border-color: #90A384;
+                border-color: #7a8c70;
             }
         </style>
         <button id="create-certificate">Создать сертификат</button>
 
         <div class="filter-buttons">
             <button class="filter-btn active" data-filter="all">Все</button>
-            <button class="filter-btn" data-filter="old">Старые (gift-share)</button>
-            <button class="filter-btn" data-filter="new">Новые (gift-you)</button>
+            <button class="filter-btn" data-filter="old">Старые</button>
+            <button class="filter-btn" data-filter="new">Новые</button>
         </div>
 
         <input type="text" style="width: calc(100% - 20px);margin-bottom: 10px; " id="searchInput" onkeyup="searchFunction()" placeholder="Для поиска введите часть или целиком имя получателя или отправителя, емейл или номер сертификата">
@@ -735,12 +746,9 @@ class trueOptionsPage
                         </span>
                     </td>
                     <td>
-                        <a href="<?= $cert_url ?>" target="_blank" title="<?= $item->certificate_id ?>">
-                            <?= $is_new && !empty($item->short_code) ? $item->short_code : substr($item->certificate_id, 0, 10) . '...' ?>
+                        <a href="<?= $cert_url ?>" target="_blank" title="Открыть сертификат">
+                            <?= $is_new && !empty($item->short_code) ? strtoupper($item->short_code) : substr($item->certificate_id, 0, 8) ?>
                         </a>
-                        <?php if ($short_url): ?>
-                        <br><small style="color:#999;">sk-clinic.ru/g/<?= $item->short_code ?></small>
-                        <?php endif; ?>
                     </td>
                     <td><?= number_format($item->certificate_amount, 0, '', ' ') ?></td>
                     <td><?= esc_html($item->recipient_name) ?></td>
@@ -1209,12 +1217,16 @@ add_action('admin_init', 'gift_you_migrate_database');
 
 /**
  * Генерация уникального короткого кода
+ *
+ * 5 символов = 36^5 = 60,466,176 комбинаций
+ * При 200 сертификатах в год - хватит на 300,000+ лет
  */
-function generate_gift_short_code($length = 8) {
+function generate_gift_short_code($length = 5) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'gift_certificates';
 
-    $characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    // Только строчные буквы и цифры (без путаницы 0/O, 1/l)
+    $characters = 'abcdefghjkmnpqrstuvwxyz23456789';
     $max_attempts = 10;
 
     for ($attempt = 0; $attempt < $max_attempts; $attempt++) {
@@ -1234,8 +1246,8 @@ function generate_gift_short_code($length = 8) {
         }
     }
 
-    // Если не удалось сгенерировать уникальный код, используем uniqid
-    return substr(uniqid(), -$length);
+    // Если не удалось - добавляем длину
+    return generate_gift_short_code($length + 1);
 }
 
 /**
@@ -1528,8 +1540,8 @@ function gift_you_send_sms_now($certificate_id) {
     $sms_sender = new Gift_SMS_Sender();
     $short_url = 'sk-clinic.ru/g/' . $certificate->short_code;
 
-    // Короткий текст для 1 SMS (~70 символов кириллицей)
-    $message = "Вам подарок! Сертификат клиники «Секреты красоты»: {$short_url}";
+    // Короткий текст для 1 SMS (~45 символов кириллицей)
+    $message = "Вам подарили сертификат: {$short_url}";
 
     $result = $sms_sender->send($certificate->recipient_phone, $message);
 
