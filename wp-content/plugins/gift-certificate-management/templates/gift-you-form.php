@@ -538,9 +538,10 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
             return;
         }
 
-        if (value < 2000) {
+        // ВРЕМЕННО: минимум 10₽ для тестирования (вернуть 2000)
+        if (value < 10) {
             amountField.classList.add('error');
-            amountError.textContent = 'не меньше 2 000 ₽';
+            amountError.textContent = 'не меньше 10 ₽';
             amountError.style.display = 'block';
             return;
         }
@@ -683,9 +684,10 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
 
         // Проверка суммы
         var amount = getSelectedAmount();
-        if (!amount || amount < 2000) {
+        // ВРЕМЕННО: минимум 10₽ для тестирования (вернуть 2000)
+        if (!amount || amount < 10) {
             amountField.classList.add('error');
-            amountError.textContent = 'Не меньше 2 000₽';
+            amountError.textContent = 'Не меньше 10₽';
             amountError.style.display = 'block';
             valid = false;
         }
