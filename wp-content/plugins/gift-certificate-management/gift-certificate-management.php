@@ -1264,6 +1264,8 @@ function gift_you_rewrite_rules() {
     add_rewrite_rule('^gift-you/([a-zA-Z0-9]+)/?$', 'index.php?gift_you_code=$1', 'top');
     // Короткий URL для SMS: /g/{short_code}/
     add_rewrite_rule('^g/([a-zA-Z0-9]+)/?$', 'index.php?gift_you_code=$1', 'top');
+    // Страница благодарности для покупателя: /gift-you-thanks/{short_code}/
+    add_rewrite_rule('^gift-you-thanks/([a-zA-Z0-9]+)/?$', 'index.php?gift_you_thanks_code=$1', 'top');
 }
 add_action('init', 'gift_you_rewrite_rules');
 
@@ -1272,12 +1274,13 @@ add_action('init', 'gift_you_rewrite_rules');
  */
 function gift_you_query_vars($vars) {
     $vars[] = 'gift_you_code';
+    $vars[] = 'gift_you_thanks_code';
     return $vars;
 }
 add_filter('query_vars', 'gift_you_query_vars');
 
 /**
- * Подключение шаблона для gift-you
+ * Подключение шаблона для gift-you (страница сертификата)
  */
 function gift_you_template_redirect() {
     $short_code = get_query_var('gift_you_code');
@@ -1286,29 +1289,15 @@ function gift_you_template_redirect() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'gift_certificates';
 
-        // Ищем сертификат по short_code
         $certificate = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM $table_name WHERE short_code = %s",
             $short_code
         ));
 
         if ($certificate) {
-            // Если это отправитель после оплаты - показываем страницу благодарности
-            $is_sender_view = isset($_GET['sender']) && $_GET['sender'] == '1';
-
-            // DEBUG: раскомментируй для проверки
-            // echo "sender=" . ($_GET['sender'] ?? 'not set') . ", status=" . $certificate->status . ", is_sender_view=" . ($is_sender_view ? 'true' : 'false'); exit;
-
-            if ($is_sender_view && $certificate->status === 'paid') {
-                include plugin_dir_path(__FILE__) . 'templates/gift-you-thank-you.php';
-                exit;
-            }
-
-            // Для получателя - показываем сам сертификат
             include plugin_dir_path(__FILE__) . 'templates/gift-you-template.php';
             exit;
         } else {
-            // Сертификат не найден - 404
             global $wp_query;
             $wp_query->set_404();
             status_header(404);
@@ -1316,6 +1305,33 @@ function gift_you_template_redirect() {
     }
 }
 add_action('template_redirect', 'gift_you_template_redirect');
+
+/**
+ * Подключение шаблона для страницы благодарности покупателю
+ */
+function gift_you_thanks_template_redirect() {
+    $short_code = get_query_var('gift_you_thanks_code');
+
+    if (!empty($short_code)) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'gift_certificates';
+
+        $certificate = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE short_code = %s",
+            $short_code
+        ));
+
+        if ($certificate) {
+            include plugin_dir_path(__FILE__) . 'templates/gift-you-thank-you.php';
+            exit;
+        } else {
+            global $wp_query;
+            $wp_query->set_404();
+            status_header(404);
+        }
+    }
+}
+add_action('template_redirect', 'gift_you_thanks_template_redirect');
 
 /**
  * Подключение класса SMS
@@ -1395,7 +1411,7 @@ function gift_you_create_payment(WP_REST_Request $request) {
             array(
                 'test_mode' => true,
                 'payment_id' => 'TEST-' . $certificate_id,
-                'payment_url' => home_url('/gift-you/' . $short_code . '/?sender=1'), // С баннером для отправителя
+                'payment_url' => home_url('/gift-you-thanks/' . $short_code . '/'), // Страница благодарности
                 'certificate_id' => $certificate_id,
                 'short_code' => $short_code,
                 'certificate_url' => home_url('/gift-you/' . $short_code . '/'),
@@ -1410,7 +1426,7 @@ function gift_you_create_payment(WP_REST_Request $request) {
     $client->setAuth('324277', 'live_3zAOaN0sUy0tcINqwat_kV2LXGX25A_3EIwesJaZ0Yg');
 
     try {
-        $return_url = home_url('/gift-you/' . $short_code . '/?sender=1');
+        $return_url = home_url('/gift-you-thanks/' . $short_code . '/');
 
         $payment = $client->createPayment(
             array(
