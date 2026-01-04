@@ -1384,7 +1384,7 @@ function gift_you_create_payment(WP_REST_Request $request) {
             array(
                 'test_mode' => true,
                 'payment_id' => 'TEST-' . $certificate_id,
-                'payment_url' => home_url('/gift-you/' . $short_code . '/'), // Сразу на страницу сертификата
+                'payment_url' => home_url('/gift-you/' . $short_code . '/?sender=1'), // С баннером для отправителя
                 'certificate_id' => $certificate_id,
                 'short_code' => $short_code,
                 'certificate_url' => home_url('/gift-you/' . $short_code . '/'),
