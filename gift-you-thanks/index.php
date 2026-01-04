@@ -513,7 +513,6 @@ if ($is_scheduled) {
 
                 <!-- Блок доставки -->
                 <div class="delivery-block">
-                    <div class="delivery-icon">📨</div>
                     <div class="delivery-text"><?php echo $delivery_text; ?></div>
                     <?php if ($delivery_time): ?>
                         <div class="delivery-time"><?php echo $delivery_time; ?></div>
