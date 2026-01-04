@@ -120,7 +120,7 @@ if ($is_scheduled) {
             width: 100%;
             min-height: 100vh;
             font-family: 'Tenor Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            background: #90A384;
             color: #fff;
             overflow-x: hidden;
         }
@@ -150,7 +150,7 @@ if ($is_scheduled) {
         .bg-circle {
             position: absolute;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(144, 163, 132, 0.15) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
         }
 
         .bg-circle-1 {
@@ -203,7 +203,7 @@ if ($is_scheduled) {
             width: 80px;
             height: 80px;
             margin: 0 auto 30px;
-            background: linear-gradient(135deg, #90A384 0%, #7a9070 100%);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -211,12 +211,13 @@ if ($is_scheduled) {
             opacity: 0;
             transform: scale(0.5);
             animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s forwards;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
         }
 
         .success-icon svg {
             width: 40px;
             height: 40px;
-            stroke: #fff;
+            stroke: #90A384;
             stroke-width: 3;
             fill: none;
         }
@@ -245,14 +246,14 @@ if ($is_scheduled) {
             font-size: clamp(28px, 5vw, 42px);
             font-weight: 400;
             margin-bottom: 15px;
-            color: #90A384;
+            color: #fff;
             opacity: 0;
             animation: fadeInUp 0.8s ease-out 0.6s forwards;
         }
 
         .subtitle {
             font-size: clamp(16px, 3vw, 20px);
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.85);
             margin-bottom: 50px;
             opacity: 0;
             animation: fadeInUp 0.8s ease-out 0.8s forwards;
@@ -260,12 +261,12 @@ if ($is_scheduled) {
 
         /* Карточка информации */
         .info-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(144, 163, 132, 0.2);
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
             border-radius: 24px;
             padding: 40px 30px;
             margin-bottom: 40px;
-            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
             opacity: 0;
             animation: fadeInUp 0.8s ease-out 1s forwards;
         }
@@ -275,7 +276,7 @@ if ($is_scheduled) {
             justify-content: space-between;
             align-items: center;
             padding: 15px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(144, 163, 132, 0.15);
         }
 
         .info-row:last-child {
@@ -284,14 +285,14 @@ if ($is_scheduled) {
 
         .info-label {
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.5);
+            color: #7a9070;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
         .info-value {
             font-size: 18px;
-            color: #fff;
+            color: #3d4a36;
             text-align: right;
         }
 
@@ -302,32 +303,27 @@ if ($is_scheduled) {
         }
 
         .info-value.recipient {
-            color: #90A384;
+            color: #5a6b52;
         }
 
         /* Блок доставки */
         .delivery-block {
-            background: linear-gradient(135deg, rgba(144, 163, 132, 0.15) 0%, rgba(144, 163, 132, 0.05) 100%);
+            background: rgba(144, 163, 132, 0.1);
             border-radius: 16px;
             padding: 25px;
             margin-top: 25px;
             text-align: center;
         }
 
-        .delivery-icon {
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-
         .delivery-text {
             font-size: 16px;
-            color: rgba(255, 255, 255, 0.8);
+            color: #5a6b52;
             margin-bottom: 5px;
         }
 
         .delivery-time {
             font-size: 20px;
-            color: #90A384;
+            color: #3d4a36;
             font-weight: 400;
         }
 
@@ -339,16 +335,16 @@ if ($is_scheduled) {
             gap: 12px;
             margin-top: 20px;
             padding: 15px;
-            background: rgba(144, 163, 132, 0.1);
+            background: rgba(144, 163, 132, 0.15);
             border-radius: 12px;
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.7);
+            color: #5a6b52;
         }
 
         .notification-info svg {
             width: 20px;
             height: 20px;
-            stroke: #90A384;
+            stroke: #7a9070;
             flex-shrink: 0;
         }
 
@@ -377,26 +373,25 @@ if ($is_scheduled) {
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #90A384 0%, #7a9070 100%);
-            color: #fff;
-            box-shadow: 0 10px 30px rgba(144, 163, 132, 0.3);
+            background: #fff;
+            color: #90A384;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 15px 40px rgba(144, 163, 132, 0.4);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
         }
 
         .btn-secondary {
             background: transparent;
-            color: rgba(255, 255, 255, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.4);
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: #fff;
-            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.6);
         }
 
         .btn svg {
@@ -412,14 +407,14 @@ if ($is_scheduled) {
         }
 
         .certificate-link a {
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.7);
             font-size: 14px;
             text-decoration: none;
             transition: color 0.3s ease;
         }
 
         .certificate-link a:hover {
-            color: #90A384;
+            color: #fff;
         }
 
         /* Футер */
@@ -432,7 +427,7 @@ if ($is_scheduled) {
 
         .footer-logo {
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.5);
             letter-spacing: 2px;
             text-transform: uppercase;
         }
