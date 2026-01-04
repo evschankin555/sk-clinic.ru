@@ -1293,8 +1293,15 @@ function gift_you_template_redirect() {
         ));
 
         if ($certificate) {
-            // Подключаем шаблон
-            include plugin_dir_path(__FILE__) . 'templates/gift-you-template.php';
+            // Если это отправитель после оплаты - показываем страницу благодарности
+            $is_sender_view = isset($_GET['sender']) && $_GET['sender'] == '1';
+
+            if ($is_sender_view && $certificate->status === 'paid') {
+                include plugin_dir_path(__FILE__) . 'templates/gift-you-thank-you.php';
+            } else {
+                // Для получателя - показываем сам сертификат
+                include plugin_dir_path(__FILE__) . 'templates/gift-you-template.php';
+            }
             exit;
         } else {
             // Сертификат не найден - 404

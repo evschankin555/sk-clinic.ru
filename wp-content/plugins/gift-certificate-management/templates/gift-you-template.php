@@ -19,21 +19,6 @@ $expiration_date = date('d.m.Y', strtotime($certificate->expiration_date));
 
 // Проверяем статус оплаты
 $is_paid = ($certificate->status === 'paid');
-
-// Проверяем, пришёл ли отправитель после оплаты
-$is_sender_view = isset($_GET['sender']) && $_GET['sender'] == '1';
-
-// Формируем текст о времени отправки SMS
-$sms_time_text = '';
-if ($is_sender_view && $is_paid) {
-    if (!empty($certificate->scheduled_at) && strtotime($certificate->scheduled_at) > time()) {
-        $scheduled_date = date('d.m.Y', strtotime($certificate->scheduled_at));
-        $scheduled_time = date('H:i', strtotime($certificate->scheduled_at));
-        $sms_time_text = "Сертификат будет отправлен получателю {$scheduled_date} в {$scheduled_time}";
-    } else {
-        $sms_time_text = "Сертификат уже отправлен получателю";
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -249,64 +234,6 @@ if ($is_sender_view && $is_paid) {
             display: block;
         }
 
-        /* Информация для отправителя после оплаты */
-        .sender-info-banner {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            background: linear-gradient(135deg, #90A384 0%, #7a9070 100%);
-            color: #fff;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            animation: slideDown 0.5s ease-out;
-        }
-
-        @keyframes slideDown {
-            from { transform: translateY(-100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .sender-info-banner h3 {
-            margin: 0 0 10px 0;
-            font-size: 18px;
-            font-weight: normal;
-        }
-
-        .sender-info-banner p {
-            margin: 5px 0;
-            font-size: 14px;
-            opacity: 0.95;
-        }
-
-        .sender-info-banner .sms-time {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 8px 16px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-top: 10px;
-            font-size: 13px;
-        }
-
-        .sender-info-banner .close-banner {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 24px;
-            cursor: pointer;
-            opacity: 0.7;
-            transition: opacity 0.2s;
-        }
-
-        .sender-info-banner .close-banner:hover {
-            opacity: 1;
-        }
-
         @media (max-height: 550px) {
             #main-screen { padding: 30px 0; display: block; }
 
@@ -338,17 +265,6 @@ if ($is_sender_view && $is_paid) {
     <?php if (!$is_paid): ?>
     <div class="payment-status show" id="paymentStatus">
         Ожидание подтверждения оплаты...
-    </div>
-    <?php endif; ?>
-
-    <?php if ($is_sender_view && $is_paid): ?>
-    <div class="sender-info-banner" id="senderInfoBanner">
-        <button class="close-banner" onclick="document.getElementById('senderInfoBanner').style.display='none'">&times;</button>
-        <h3>Спасибо за покупку!</h3>
-        <p>Вы приобрели подарочный сертификат на сумму <?php echo $amount; ?> руб.</p>
-        <p>для <?php echo $recipient_name; ?></p>
-        <div class="sms-time"><?php echo $sms_time_text; ?></div>
-        <p style="margin-top: 12px; font-size: 12px; opacity: 0.8;">Вы получите уведомление, когда сертификат будет доставлен</p>
     </div>
     <?php endif; ?>
 
