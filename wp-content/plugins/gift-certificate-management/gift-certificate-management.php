@@ -1399,7 +1399,7 @@ function gift_you_create_payment(WP_REST_Request $request) {
     $client->setAuth('324277', 'live_3zAOaN0sUy0tcINqwat_kV2LXGX25A_3EIwesJaZ0Yg');
 
     try {
-        $return_url = home_url('/gift-you/' . $short_code . '/');
+        $return_url = home_url('/gift-you/' . $short_code . '/?sender=1');
 
         $payment = $client->createPayment(
             array(
@@ -1546,8 +1546,8 @@ function gift_you_send_sms_now($certificate_id) {
     $sms_sender = new Gift_SMS_Sender();
     $short_url = 'sk-clinic.ru/g/' . $certificate->short_code;
 
-    // Короткий текст для 1 SMS (~45 символов кириллицей)
-    $message = "Вам подарили сертификат: {$short_url}";
+    // Полный текст SMS (~115 символов = 2 SMS кириллицей)
+    $message = "Вам отправили подарок! Подарочный сертификат от клиники «Секреты красоты». Доступен по ссылке: {$short_url}";
 
     $result = $sms_sender->send($certificate->recipient_phone, $message);
 
@@ -1652,7 +1652,7 @@ add_filter('cron_schedules', 'gift_you_cron_intervals');
 add_action('gift_you_cron_send_sms', 'gift_you_process_scheduled_sms');
 
 /**
- * Уведомление отправителя о доставке
+ * Уведомление отправителя о доставке (SMS + Email)
  */
 function gift_you_notify_sender($certificate_id) {
     global $wpdb;
@@ -1667,16 +1667,37 @@ function gift_you_notify_sender($certificate_id) {
         return false;
     }
 
+    $amount = number_format($certificate->certificate_amount, 0, '', ' ');
+    $notified = false;
+
+    // 1. Отправляем SMS отправителю
+    if (!empty($certificate->sender_phone)) {
+        $sms_sender = new Gift_SMS_Sender();
+        $sms_message = "Ваш подарок доставлен! {$certificate->recipient_name} получил сертификат на {$amount} руб. Клиника «Секреты красоты»";
+        $sms_result = $sms_sender->send($certificate->sender_phone, $sms_message);
+
+        if ($sms_result['success']) {
+            $notified = true;
+            error_log("Gift SMS: Sender notified via SMS - {$certificate->sender_phone}");
+        }
+    }
+
+    // 2. Отправляем Email отправителю
     $subject = 'Ваш подарочный сертификат доставлен!';
-    $message = "Здравствуйте, {$certificate->sender_name}!\n\n";
-    $message .= "Ваш подарочный сертификат на сумму {$certificate->certificate_amount} руб. ";
-    $message .= "был успешно доставлен получателю ({$certificate->recipient_name}).\n\n";
-    $message .= "Спасибо, что выбрали клинику «Секреты красоты»!\n\n";
-    $message .= "С уважением,\nКлиника «Секреты красоты»";
+    $email_message = "Здравствуйте, {$certificate->sender_name}!\n\n";
+    $email_message .= "Ваш подарочный сертификат на сумму {$amount} руб. ";
+    $email_message .= "был успешно доставлен получателю ({$certificate->recipient_name}).\n\n";
+    $email_message .= "Спасибо, что выбрали клинику «Секреты красоты»!\n\n";
+    $email_message .= "С уважением,\nКлиника «Секреты красоты»";
 
-    $sent = wp_mail($certificate->sender_email, $subject, $message);
+    $email_sent = wp_mail($certificate->sender_email, $subject, $email_message);
 
-    if ($sent) {
+    if ($email_sent) {
+        $notified = true;
+    }
+
+    // Отмечаем что уведомление отправлено
+    if ($notified) {
         $wpdb->update(
             $table_name,
             array('sender_notified' => 1),
@@ -1684,7 +1705,7 @@ function gift_you_notify_sender($certificate_id) {
         );
     }
 
-    return $sent;
+    return $notified;
 }
 
 /**
