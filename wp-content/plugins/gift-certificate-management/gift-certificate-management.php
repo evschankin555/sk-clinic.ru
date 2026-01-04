@@ -1296,12 +1296,16 @@ function gift_you_template_redirect() {
             // Если это отправитель после оплаты - показываем страницу благодарности
             $is_sender_view = isset($_GET['sender']) && $_GET['sender'] == '1';
 
+            // DEBUG: раскомментируй для проверки
+            // echo "sender=" . ($_GET['sender'] ?? 'not set') . ", status=" . $certificate->status . ", is_sender_view=" . ($is_sender_view ? 'true' : 'false'); exit;
+
             if ($is_sender_view && $certificate->status === 'paid') {
                 include plugin_dir_path(__FILE__) . 'templates/gift-you-thank-you.php';
-            } else {
-                // Для получателя - показываем сам сертификат
-                include plugin_dir_path(__FILE__) . 'templates/gift-you-template.php';
+                exit;
             }
+
+            // Для получателя - показываем сам сертификат
+            include plugin_dir_path(__FILE__) . 'templates/gift-you-template.php';
             exit;
         } else {
             // Сертификат не найден - 404
