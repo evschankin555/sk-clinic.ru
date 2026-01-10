@@ -770,7 +770,14 @@ class trueOptionsPage
                             // Для запланированных показываем специальный статус
                             if ($is_scheduled) {
                                 $sms_color = '#9C27B0'; // Фиолетовый для запланированных
-                                $sms_text = '⏰ ' . date('d.m H:i', strtotime($item->scheduled_at));
+                                // scheduled_at хранится в UTC, конвертируем в МСК для отображения
+                                try {
+                                    $scheduled_utc = new DateTime($item->scheduled_at, new DateTimeZone('UTC'));
+                                    $scheduled_utc->setTimezone(new DateTimeZone('Europe/Moscow'));
+                                    $sms_text = '⏰ ' . $scheduled_utc->format('d.m H:i') . ' МСК';
+                                } catch (Exception $e) {
+                                    $sms_text = '⏰ ' . date('d.m H:i', strtotime($item->scheduled_at));
+                                }
                             } else {
                                 $sms_color = $this->get_sms_status_color($sms_status);
                                 $sms_text = $this->translate_sms_status($sms_status);
@@ -864,6 +871,10 @@ class trueOptionsPage
         <!-- jQuery и JavaScript для обработки клика по статусу и сохранения нового статуса -->
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
         <script>
+            // Nonce для AJAX запросов из админки (используем admin-ajax вместо REST API)
+            var giftAdminNonce = '<?php echo wp_create_nonce('gift_you_admin_nonce'); ?>';
+            var ajaxUrl = '<?php echo admin_url('admin-ajax.php'); ?>';
+            
             jQuery(document).ready(function() {
                 var currentId = null;
 
@@ -1041,6 +1052,7 @@ class trueOptionsPage
                 jQuery('.btn-send-sms').click(function() {
                     var btn = jQuery(this);
                     var certificateId = btn.data('id');
+                    var originalText = btn.text();
 
                     if (!confirm('Отправить SMS сейчас?')) {
                         return;
@@ -1048,23 +1060,68 @@ class trueOptionsPage
 
                     btn.prop('disabled', true).text('...');
 
+                    // Используем admin-ajax.php для надежной аутентификации из админки
                     jQuery.ajax({
-                        url: '/wp-json/gift-you/v1/send_sms/',
+                        url: ajaxUrl,
                         method: 'POST',
-                        data: JSON.stringify({ certificate_id: certificateId }),
-                        contentType: 'application/json; charset=utf-8',
+                        data: {
+                            action: 'gift_you_send_sms',
+                            certificate_id: certificateId,
+                            nonce: giftAdminNonce
+                        },
                         dataType: 'json',
                         success: function(response) {
-                            if (response.status === 'sent') {
+                            if (response.success && response.data && response.data.status === 'sent') {
                                 btn.closest('td').html('<span class="sms-status" style="background: #2196F3; color: #fff;">Отправлено</span>');
                             } else {
-                                btn.prop('disabled', false).text('Отправить');
-                                alert('Ошибка отправки SMS');
+                                btn.prop('disabled', false).text(originalText);
+                                var errorMsg = 'Ошибка отправки SMS';
+                                if (response.data && response.data.message) {
+                                    errorMsg = response.data.message;
+                                } else if (response.data && response.data.status) {
+                                    errorMsg = 'Статус: ' + response.data.status;
+                                }
+                                alert(errorMsg);
                             }
                         },
-                        error: function() {
-                            btn.prop('disabled', false).text('Отправить');
-                            alert('Ошибка отправки SMS');
+                        error: function(xhr, status, error) {
+                            btn.prop('disabled', false).text(originalText);
+                            var errorMsg = 'Ошибка отправки SMS';
+                            
+                            // Проверяем различные варианты ответа об ошибке
+                            if (xhr.status === 403 || xhr.status === 401) {
+                                errorMsg = 'Ошибка доступа. Обновите страницу и попробуйте снова.';
+                            } else if (xhr.responseJSON) {
+                                if (xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                                    errorMsg = xhr.responseJSON.data.message;
+                                } else if (xhr.responseJSON.message) {
+                                    errorMsg = xhr.responseJSON.message;
+                                } else if (xhr.responseJSON.code) {
+                                    errorMsg = 'Ошибка: ' + xhr.responseJSON.code;
+                                }
+                            } else if (xhr.responseText) {
+                                try {
+                                    var errorData = JSON.parse(xhr.responseText);
+                                    if (errorData.data && errorData.data.message) {
+                                        errorMsg = errorData.data.message;
+                                    } else if (errorData.message) {
+                                        errorMsg = errorData.message;
+                                    } else if (errorData.code) {
+                                        errorMsg = 'Ошибка: ' + errorData.code;
+                                    }
+                                } catch (e) {
+                                    // Если не удалось распарсить JSON, показываем общую ошибку
+                                    console.error('SMS Send Error:', xhr.status, xhr.statusText, xhr.responseText);
+                                }
+                            }
+                            
+                            console.error('SMS Send Error Details:', {
+                                status: xhr.status,
+                                statusText: xhr.statusText,
+                                response: xhr.responseJSON || xhr.responseText
+                            });
+                            
+                            alert(errorMsg);
                         }
                     });
                 });
@@ -1363,10 +1420,28 @@ function gift_you_create_payment(WP_REST_Request $request) {
     $expiration_date = date('Y-m-d H:i:s', strtotime('+1 year'));
 
     // Определяем время отправки SMS
+    // ВАЖНО: Время приходит в формате МСК (UTC+3), сохраняем в UTC для CRON
     $scheduled_at = null;
     $sms_status = 'pending';
     if (!empty($data['scheduled_at'])) {
-        $scheduled_at = date('Y-m-d H:i:s', strtotime($data['scheduled_at']));
+        try {
+            // Парсим ISO 8601 время (ожидается в МСК, например: "2026-01-11T01:07:00+03:00")
+            $scheduled_dt = new DateTime($data['scheduled_at']);
+            // Конвертируем в UTC для хранения в БД
+            $scheduled_dt->setTimezone(new DateTimeZone('UTC'));
+            
+            // Валидация: проверяем, что время не в прошлом (в UTC)
+            $now_utc = new DateTime('now', new DateTimeZone('UTC'));
+            if ($scheduled_dt <= $now_utc) {
+                return new WP_REST_Response('Нельзя выбрать прошедшее время', 400);
+            }
+            
+            // Сохраняем в UTC в формате MySQL DATETIME
+            $scheduled_at = $scheduled_dt->format('Y-m-d H:i:s');
+        } catch (Exception $e) {
+            // Если не удалось распарсить, возвращаем ошибку
+            return new WP_REST_Response('Неверный формат времени: ' . $e->getMessage(), 400);
+        }
     }
 
     // В тестовом режиме сразу ставим статус paid
@@ -1570,6 +1645,17 @@ function gift_you_send_sms_now($certificate_id) {
         return false;
     }
 
+    // Очищаем scheduled_at если это была запланированная отправка (ручная отправка из админки)
+    if (!empty($certificate->scheduled_at)) {
+        $wpdb->update(
+            $table_name,
+            array('scheduled_at' => null),
+            array('certificate_id' => $certificate_id),
+            array('%s'),
+            array('%s')
+        );
+    }
+
     $sms_sender = new Gift_SMS_Sender();
     $short_url = 'sk-clinic.ru/g/' . $certificate->short_code;
 
@@ -1600,7 +1686,39 @@ function gift_you_send_sms_now($certificate_id) {
 }
 
 /**
- * REST API: Отправить SMS сейчас (вручную из админки)
+ * AJAX обработчик: Отправить SMS сейчас (вручную из админки)
+ * Использует admin-ajax.php вместо REST API для надежной аутентификации в админке
+ */
+add_action('wp_ajax_gift_you_send_sms', 'gift_you_send_sms_ajax_handler');
+function gift_you_send_sms_ajax_handler() {
+    // Проверяем nonce для безопасности
+    check_ajax_referer('gift_you_admin_nonce', 'nonce');
+    
+    // Проверяем права доступа
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => 'Извините, вам не разрешено выполнять данное действие.'));
+        return;
+    }
+    
+    // Получаем certificate_id из POST данных
+    $certificate_id = isset($_POST['certificate_id']) ? sanitize_text_field($_POST['certificate_id']) : '';
+    
+    if (empty($certificate_id)) {
+        wp_send_json_error(array('message' => 'certificate_id required'));
+        return;
+    }
+    
+    $result = gift_you_send_sms_now($certificate_id);
+    
+    if ($result) {
+        wp_send_json_success(array('status' => 'sent'));
+    } else {
+        wp_send_json_error(array('status' => 'failed', 'message' => 'Ошибка отправки SMS'));
+    }
+}
+
+/**
+ * REST API: Отправить SMS сейчас (для совместимости, если используется REST API)
  */
 function gift_you_send_sms_now_api(WP_REST_Request $request) {
     $data = $request->get_json_params();
@@ -1622,8 +1740,29 @@ add_action('rest_api_init', function () {
     register_rest_route('gift-you/v1', '/send_sms/', array(
         'methods' => 'POST',
         'callback' => 'gift_you_send_sms_now_api',
-        'permission_callback' => function() {
-            return current_user_can('manage_options');
+        'permission_callback' => function($request) {
+            // Для WordPress REST API из админки используем cookie-based аутентификацию
+            // Проверяем, что пользователь залогинен
+            if (!is_user_logged_in()) {
+                return false;
+            }
+            
+            // Проверяем права доступа - только администраторы могут отправлять SMS
+            if (!current_user_can('manage_options')) {
+                return false;
+            }
+            
+            // Дополнительно проверяем nonce если он передан (для дополнительной безопасности)
+            $nonce = $request->get_header('X-WP-Nonce');
+            if ($nonce) {
+                $nonce_check = wp_verify_nonce($nonce, 'wp_rest');
+                // Если nonce передан, но неверный - отклоняем запрос
+                if (!$nonce_check) {
+                    return false;
+                }
+            }
+            
+            return true;
         }
     ));
 });
@@ -1635,23 +1774,31 @@ function gift_you_process_scheduled_sms() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'gift_certificates';
 
+    // Получаем текущее время в UTC
+    $now_utc = new DateTime('now', new DateTimeZone('UTC'));
+    $now_str = $now_utc->format('Y-m-d H:i:s');
+
     // Логируем запуск
-    error_log('Gift SMS Cron: Starting at ' . current_time('mysql'));
+    error_log('Gift SMS Cron: Starting at ' . $now_str . ' (UTC)');
 
     // Находим сертификаты для отправки
+    // Сравниваем scheduled_at (которое хранится в UTC) с текущим временем в UTC
     $certificates = $wpdb->get_results(
-        "SELECT * FROM $table_name
-         WHERE certificate_type = 'new'
-         AND status = 'paid'
-         AND sms_status = 'pending'
-         AND scheduled_at IS NOT NULL
-         AND scheduled_at <= NOW()"
+        $wpdb->prepare(
+            "SELECT * FROM $table_name
+             WHERE certificate_type = 'new'
+             AND status = 'paid'
+             AND sms_status = 'pending'
+             AND scheduled_at IS NOT NULL
+             AND scheduled_at <= %s",
+            $now_str
+        )
     );
 
     error_log('Gift SMS Cron: Found ' . count($certificates) . ' certificates to send');
 
     foreach ($certificates as $cert) {
-        error_log('Gift SMS Cron: Sending SMS for certificate ' . $cert->certificate_id);
+        error_log('Gift SMS Cron: Sending SMS for certificate ' . $cert->certificate_id . ' (scheduled_at: ' . $cert->scheduled_at . ')');
         $result = gift_you_send_sms_now($cert->certificate_id);
         error_log('Gift SMS Cron: Result - ' . ($result ? 'success' : 'failed'));
     }

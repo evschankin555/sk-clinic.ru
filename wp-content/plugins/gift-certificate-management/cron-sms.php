@@ -31,11 +31,14 @@ if (php_sapi_name() !== 'cli') {
 
 cron_log('=== CRON START ===');
 cron_log('Server time: ' . date('Y-m-d H:i:s'));
-cron_log('Timezone: ' . date_default_timezone_get());
+cron_log('Server timezone: ' . date_default_timezone_get());
 
 // Подключаем WordPress
 require_once dirname(dirname(dirname(dirname(__DIR__)))) . '/wp-load.php';
 
+// Получаем время в UTC для корректного сравнения
+$now_utc = new DateTime('now', new DateTimeZone('UTC'));
+cron_log('UTC time: ' . $now_utc->format('Y-m-d H:i:s'));
 cron_log('WordPress time: ' . current_time('mysql'));
 cron_log('WordPress timezone: ' . wp_timezone_string());
 
@@ -54,11 +57,12 @@ $pending = $wpdb->get_results(
 
 cron_log('Pending SMS certificates: ' . count($pending));
 
+// Используем UTC для сравнения (scheduled_at хранится в UTC)
+$now_utc_str = $now_utc->format('Y-m-d H:i:s');
 foreach ($pending as $cert) {
     $scheduled = $cert->scheduled_at ? $cert->scheduled_at : 'NULL';
-    $now = current_time('mysql');
-    $should_send = ($cert->scheduled_at && $cert->scheduled_at <= $now) ? 'YES' : 'NO';
-    cron_log("  - {$cert->short_code}: scheduled={$scheduled}, status={$cert->status}, should_send={$should_send}");
+    $should_send = ($cert->scheduled_at && $cert->scheduled_at <= $now_utc_str) ? 'YES' : 'NO';
+    cron_log("  - {$cert->short_code}: scheduled={$scheduled} (UTC), now={$now_utc_str} (UTC), should_send={$should_send}, status={$cert->status}");
 }
 
 // Запускаем обработку

@@ -77,6 +77,7 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
                         <div class="send-plan">
                             <input type="date" id="sendDate">
                             <input type="time" id="sendTime">
+                            <small style="display: block; margin-top: 5px; color: var(--gift-gray); font-size: 12px;">Время указывается в московском времени (МСК, UTC+3)</small>
                         </div>
                     </div>
                 </div>
@@ -605,11 +606,61 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
         });
     });
 
-    // Устанавливаем дату/время по умолчанию
-    var now = new Date();
-    document.getElementById('sendDate').value = now.toISOString().slice(0, 10);
-    now.setHours(now.getHours() + 5);
-    document.getElementById('sendTime').value = now.toTimeString().slice(0, 5);
+    // Устанавливаем дату/время по умолчанию (в МСК)
+    var sendDate = document.getElementById('sendDate');
+    var sendTime = document.getElementById('sendTime');
+    
+    // Получаем текущее время в МСК (UTC+3)
+    function getMoscowTime() {
+        var now = new Date();
+        // МСК = UTC+3
+        var utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+        var mskTime = new Date(utcTime + (3 * 3600000)); // +3 часа для МСК
+        return mskTime;
+    }
+    
+    var nowMsk = getMoscowTime();
+    
+    // Устанавливаем минимальную дату на сегодня (в МСК)
+    var mskDateStr = nowMsk.toISOString().slice(0, 10);
+    sendDate.min = mskDateStr;
+    sendDate.value = mskDateStr;
+    
+    var hours = String(nowMsk.getHours()).padStart(2, '0');
+    var minutes = String(nowMsk.getMinutes()).padStart(2, '0');
+    sendTime.value = hours + ':' + minutes;
+    
+    // Функция валидации даты/времени (проверяем в МСК)
+    function validateDateTime() {
+        if (sendDate.value && sendTime.value) {
+            // Создаем дату из введенных значений (интерпретируем как МСК)
+            var selectedMskStr = sendDate.value + 'T' + sendTime.value + ':00+03:00';
+            var selectedMsk = new Date(selectedMskStr);
+            var nowMsk = getMoscowTime();
+            
+            // Если выбранное время в прошлом (в МСК), показываем ошибку
+            if (selectedMsk < nowMsk) {
+                showError('Нельзя выбрать прошедшее время');
+                var sendPlanField = sendDate.closest('.field');
+                if (sendPlanField) {
+                    sendPlanField.classList.add('error');
+                }
+                return false;
+            } else {
+                // Убираем ошибку если время корректно
+                var sendPlanField = sendDate.closest('.field');
+                if (sendPlanField) {
+                    sendPlanField.classList.remove('error');
+                }
+                hideError();
+            }
+        }
+        return true;
+    }
+    
+    // Добавляем обработчики для валидации
+    sendDate.addEventListener('change', validateDateTime);
+    sendTime.addEventListener('change', validateDateTime);
 
     // ======================================================
     // СНЯТИЕ ОШИБОК ПРИ ИСПРАВЛЕНИИ ПОЛЕЙ
@@ -692,6 +743,14 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
             valid = false;
         }
 
+        // Валидация даты/времени планирования
+        var planBtn = document.querySelector('.gift-wrap .send-btn[data-mode="plan"]');
+        if (planBtn && planBtn.classList.contains('active')) {
+            if (!validateDateTime()) {
+                valid = false;
+            }
+        }
+
         // Обязательные поля с классом .req
         document.querySelectorAll('.gift-wrap .req').forEach(function(block) {
             var input = block.querySelector('input:not([type="checkbox"]), textarea');
@@ -747,7 +806,9 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
             var sendDate = document.getElementById('sendDate').value;
             var sendTime = document.getElementById('sendTime').value;
             if (sendDate && sendTime) {
-                scheduledAt = sendDate + 'T' + sendTime;
+                // Введенные дата и время интерпретируются как МСК
+                // Отправляем время в формате МСК (UTC+3): "2026-01-11T01:07:00+03:00"
+                scheduledAt = sendDate + 'T' + sendTime + ':00+03:00';
             }
         }
 

@@ -83,15 +83,30 @@ $sender_name = esc_html($certificate->sender_name ?: '');
 $certificate_url = home_url('/gift-you/' . $short_code . '/');
 
 // Определяем время отправки
-$is_scheduled = !empty($certificate->scheduled_at) && strtotime($certificate->scheduled_at) > time();
-if ($is_scheduled) {
-    $scheduled_date = date('d.m.Y', strtotime($certificate->scheduled_at));
-    $scheduled_time = date('H:i', strtotime($certificate->scheduled_at));
-    $delivery_text = "Сертификат будет отправлен";
-    $delivery_time = "{$scheduled_date} в {$scheduled_time}";
-} else {
-    $delivery_text = "Сертификат уже отправлен";
-    $delivery_time = "";
+// scheduled_at хранится в UTC, конвертируем обратно в МСК для отображения
+$is_scheduled = false;
+$delivery_text = "Сертификат уже отправлен";
+$delivery_time = "";
+
+if (!empty($certificate->scheduled_at)) {
+    try {
+        // Парсим время из UTC
+        $scheduled_utc = new DateTime($certificate->scheduled_at, new DateTimeZone('UTC'));
+        $now_utc = new DateTime('now', new DateTimeZone('UTC'));
+        
+        if ($scheduled_utc > $now_utc) {
+            // Конвертируем из UTC в МСК (UTC+3)
+            $scheduled_utc->setTimezone(new DateTimeZone('Europe/Moscow'));
+            $scheduled_date = $scheduled_utc->format('d.m.Y');
+            $scheduled_time = $scheduled_utc->format('H:i');
+            $delivery_text = "Сертификат будет отправлен";
+            $delivery_time = "{$scheduled_date} в {$scheduled_time} (МСК)";
+            $is_scheduled = true;
+        }
+    } catch (Exception $e) {
+        // В случае ошибки считаем, что отправлено
+        $delivery_text = "Сертификат уже отправлен";
+    }
 }
 ?>
 <!DOCTYPE html>
