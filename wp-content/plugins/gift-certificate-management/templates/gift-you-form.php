@@ -77,7 +77,7 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
                         <div class="send-plan">
                             <input type="date" id="sendDate">
                             <input type="time" id="sendTime">
-                            <small style="display: block; margin-top: 5px; color: var(--gift-gray); font-size: 12px;">Время указывается в московском времени (МСК, UTC+3)</small>
+                            <small style="display: block; margin-top: 5px; color: var(--gift-gray); font-size: 12px;">Время указывается во времени Екатеринбурга (ЕКБ, UTC+5)</small>
                         </div>
                     </div>
                 </div>
@@ -606,40 +606,74 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
         });
     });
 
-    // Устанавливаем дату/время по умолчанию (в МСК)
+    // Устанавливаем дату/время по умолчанию (в ЕКБ)
     var sendDate = document.getElementById('sendDate');
     var sendTime = document.getElementById('sendTime');
     
-    // Получаем текущее время в МСК (UTC+3)
-    function getMoscowTime() {
-        var now = new Date();
-        // МСК = UTC+3
-        var utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-        var mskTime = new Date(utcTime + (3 * 3600000)); // +3 часа для МСК
-        return mskTime;
+    // Переменная для хранения текущего времени сервера в Екатеринбурге
+    var serverTimeYek = null;
+    
+    // Получаем текущее время сервера в Екатеринбурге
+    function getServerTime() {
+        return fetch('/wp-json/gift-you/v1/get_server_time/')
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.iso) {
+                    // Парсим ISO 8601 время с часовым поясом
+                    serverTimeYek = new Date(data.iso);
+                    
+                    // Устанавливаем минимальную дату на сегодня (в ЕКБ)
+                    var yekDateStr = data.date;
+                    sendDate.min = yekDateStr;
+                    sendDate.value = yekDateStr;
+                    
+                    // Устанавливаем текущее время
+                    sendTime.value = data.time_hours;
+                    
+                    return serverTimeYek;
+                } else {
+                    console.error('Ошибка получения времени сервера:', data);
+                    // Fallback: используем текущее время браузера (не идеально, но лучше чем ничего)
+                    var now = new Date();
+                    serverTimeYek = new Date(now.getTime() + (5 * 3600000)); // UTC+5
+                    var yekDateStr = serverTimeYek.toISOString().slice(0, 10);
+                    sendDate.min = yekDateStr;
+                    sendDate.value = yekDateStr;
+                    var hours = String(serverTimeYek.getHours()).padStart(2, '0');
+                    var minutes = String(serverTimeYek.getMinutes()).padStart(2, '0');
+                    sendTime.value = hours + ':' + minutes;
+                    return serverTimeYek;
+                }
+            })
+            .catch(function(error) {
+                console.error('Ошибка запроса времени сервера:', error);
+                // Fallback: используем текущее время браузера
+                var now = new Date();
+                serverTimeYek = new Date(now.getTime() + (5 * 3600000)); // UTC+5
+                var yekDateStr = serverTimeYek.toISOString().slice(0, 10);
+                sendDate.min = yekDateStr;
+                sendDate.value = yekDateStr;
+                var hours = String(serverTimeYek.getHours()).padStart(2, '0');
+                var minutes = String(serverTimeYek.getMinutes()).padStart(2, '0');
+                sendTime.value = hours + ':' + minutes;
+                return serverTimeYek;
+            });
     }
     
-    var nowMsk = getMoscowTime();
+    // Загружаем время сервера при инициализации
+    getServerTime();
     
-    // Устанавливаем минимальную дату на сегодня (в МСК)
-    var mskDateStr = nowMsk.toISOString().slice(0, 10);
-    sendDate.min = mskDateStr;
-    sendDate.value = mskDateStr;
-    
-    var hours = String(nowMsk.getHours()).padStart(2, '0');
-    var minutes = String(nowMsk.getMinutes()).padStart(2, '0');
-    sendTime.value = hours + ':' + minutes;
-    
-    // Функция валидации даты/времени (проверяем в МСК)
+    // Функция валидации даты/времени (проверяем в ЕКБ)
     function validateDateTime() {
-        if (sendDate.value && sendTime.value) {
-            // Создаем дату из введенных значений (интерпретируем как МСК)
-            var selectedMskStr = sendDate.value + 'T' + sendTime.value + ':00+03:00';
-            var selectedMsk = new Date(selectedMskStr);
-            var nowMsk = getMoscowTime();
+        if (sendDate.value && sendTime.value && serverTimeYek) {
+            // Создаем дату из введенных значений (интерпретируем как ЕКБ)
+            var selectedYekStr = sendDate.value + 'T' + sendTime.value + ':00+05:00';
+            var selectedYek = new Date(selectedYekStr);
             
-            // Если выбранное время в прошлом (в МСК), показываем ошибку
-            if (selectedMsk < nowMsk) {
+            // Если выбранное время в прошлом (в ЕКБ), показываем ошибку
+            if (selectedYek < serverTimeYek) {
                 showError('Нельзя выбрать прошедшее время');
                 var sendPlanField = sendDate.closest('.field');
                 if (sendPlanField) {
@@ -806,9 +840,9 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
             var sendDate = document.getElementById('sendDate').value;
             var sendTime = document.getElementById('sendTime').value;
             if (sendDate && sendTime) {
-                // Введенные дата и время интерпретируются как МСК
-                // Отправляем время в формате МСК (UTC+3): "2026-01-11T01:07:00+03:00"
-                scheduledAt = sendDate + 'T' + sendTime + ':00+03:00';
+                // Введенные дата и время интерпретируются как ЕКБ
+                // Отправляем время в формате Екатеринбурга (UTC+5): "2026-01-11T01:07:00+05:00"
+                scheduledAt = sendDate + 'T' + sendTime + ':00+05:00';
             }
         }
 

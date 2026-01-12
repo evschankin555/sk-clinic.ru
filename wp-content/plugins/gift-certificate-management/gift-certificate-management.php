@@ -770,11 +770,11 @@ class trueOptionsPage
                             // Для запланированных показываем специальный статус
                             if ($is_scheduled) {
                                 $sms_color = '#9C27B0'; // Фиолетовый для запланированных
-                                // scheduled_at хранится в UTC, конвертируем в МСК для отображения
+                                // scheduled_at хранится в UTC, конвертируем в Екатеринбург для отображения
                                 try {
                                     $scheduled_utc = new DateTime($item->scheduled_at, new DateTimeZone('UTC'));
-                                    $scheduled_utc->setTimezone(new DateTimeZone('Europe/Moscow'));
-                                    $sms_text = '⏰ ' . $scheduled_utc->format('d.m H:i') . ' МСК';
+                                    $scheduled_utc->setTimezone(new DateTimeZone('Asia/Yekaterinburg'));
+                                    $sms_text = '⏰ ' . $scheduled_utc->format('d.m H:i') . ' ЕКБ';
                                 } catch (Exception $e) {
                                     $sms_text = '⏰ ' . date('d.m H:i', strtotime($item->scheduled_at));
                                 }
@@ -1420,12 +1420,12 @@ function gift_you_create_payment(WP_REST_Request $request) {
     $expiration_date = date('Y-m-d H:i:s', strtotime('+1 year'));
 
     // Определяем время отправки SMS
-    // ВАЖНО: Время приходит в формате МСК (UTC+3), сохраняем в UTC для CRON
+    // ВАЖНО: Время приходит в формате Екатеринбурга (UTC+5), сохраняем в UTC для CRON
     $scheduled_at = null;
     $sms_status = 'pending';
     if (!empty($data['scheduled_at'])) {
         try {
-            // Парсим ISO 8601 время (ожидается в МСК, например: "2026-01-11T01:07:00+03:00")
+            // Парсим ISO 8601 время (ожидается в Екатеринбурге, например: "2026-01-11T01:07:00+05:00")
             $scheduled_dt = new DateTime($data['scheduled_at']);
             // Конвертируем в UTC для хранения в БД
             $scheduled_dt->setTimezone(new DateTimeZone('UTC'));
@@ -1625,6 +1625,38 @@ add_action('rest_api_init', function () {
     register_rest_route('gift-you/v1', '/check_payment/', array(
         'methods' => 'POST',
         'callback' => 'gift_you_check_payment',
+        'permission_callback' => '__return_true'
+    ));
+});
+
+/**
+ * REST API: Получение текущего времени сервера в Екатеринбурге
+ */
+function gift_you_get_server_time() {
+    try {
+        // Получаем текущее время в Екатеринбурге
+        $now = new DateTime('now', new DateTimeZone('Asia/Yekaterinburg'));
+        
+        return new WP_REST_Response(array(
+            'time' => $now->format('Y-m-d\TH:i:s'),
+            'timezone' => 'Asia/Yekaterinburg',
+            'offset' => '+05:00',
+            'iso' => $now->format('c'), // ISO 8601 с часовым поясом
+            'timestamp' => $now->getTimestamp(),
+            'date' => $now->format('Y-m-d'),
+            'time_hours' => $now->format('H:i')
+        ), 200);
+    } catch (Exception $e) {
+        return new WP_REST_Response(array(
+            'error' => 'Ошибка получения времени: ' . $e->getMessage()
+        ), 500);
+    }
+}
+
+add_action('rest_api_init', function () {
+    register_rest_route('gift-you/v1', '/get_server_time/', array(
+        'methods' => 'GET',
+        'callback' => 'gift_you_get_server_time',
         'permission_callback' => '__return_true'
     ));
 });

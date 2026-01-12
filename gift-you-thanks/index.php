@@ -83,7 +83,7 @@ $sender_name = esc_html($certificate->sender_name ?: '');
 $certificate_url = home_url('/gift-you/' . $short_code . '/');
 
 // Определяем время отправки
-// scheduled_at хранится в UTC, конвертируем обратно в МСК для отображения
+// scheduled_at хранится в UTC, конвертируем обратно в Екатеринбург для отображения
 $is_scheduled = false;
 $delivery_text = "Сертификат уже отправлен";
 $delivery_time = "";
@@ -95,12 +95,12 @@ if (!empty($certificate->scheduled_at)) {
         $now_utc = new DateTime('now', new DateTimeZone('UTC'));
         
         if ($scheduled_utc > $now_utc) {
-            // Конвертируем из UTC в МСК (UTC+3)
-            $scheduled_utc->setTimezone(new DateTimeZone('Europe/Moscow'));
+            // Конвертируем из UTC в Екатеринбург (UTC+5)
+            $scheduled_utc->setTimezone(new DateTimeZone('Asia/Yekaterinburg'));
             $scheduled_date = $scheduled_utc->format('d.m.Y');
             $scheduled_time = $scheduled_utc->format('H:i');
             $delivery_text = "Сертификат будет отправлен";
-            $delivery_time = "{$scheduled_date} в {$scheduled_time} (МСК)";
+            $delivery_time = "{$scheduled_date} в {$scheduled_time} (ЕКБ)";
             $is_scheduled = true;
         }
     } catch (Exception $e) {
