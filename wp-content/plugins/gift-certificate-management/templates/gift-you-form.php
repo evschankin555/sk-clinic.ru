@@ -612,6 +612,38 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
     
     // Переменная для хранения текущего времени сервера в Екатеринбурге
     var serverTimeYek = null;
+    var serverTimeYekPromise = null;
+    var YEK_TIMEZONE = 'Asia/Yekaterinburg';
+    
+    function formatDateInTimeZone(date, timeZone) {
+        try {
+            // en-CA => YYYY-MM-DD
+            return new Intl.DateTimeFormat('en-CA', {
+                timeZone: timeZone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).format(date);
+        } catch (e) {
+            return date.toISOString().slice(0, 10);
+        }
+    }
+    
+    function formatTimeHMInTimeZone(date, timeZone) {
+        try {
+            // en-GB => HH:MM (24h)
+            return new Intl.DateTimeFormat('en-GB', {
+                timeZone: timeZone,
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }).format(date);
+        } catch (e) {
+            var hours = String(date.getHours()).padStart(2, '0');
+            var minutes = String(date.getMinutes()).padStart(2, '0');
+            return hours + ':' + minutes;
+        }
+    }
     
     // Получаем текущее время сервера в Екатеринбурге
     function getServerTime() {
@@ -635,66 +667,88 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
                     return serverTimeYek;
                 } else {
                     console.error('Ошибка получения времени сервера:', data);
-                    // Fallback: используем текущее время браузера (не идеально, но лучше чем ничего)
+                    // Fallback: используем текущее время браузера, но форматируем как ЕКБ (без "прибавить 5 часов")
                     var now = new Date();
-                    serverTimeYek = new Date(now.getTime() + (5 * 3600000)); // UTC+5
-                    var yekDateStr = serverTimeYek.toISOString().slice(0, 10);
+                    serverTimeYek = now;
+                    var yekDateStr = formatDateInTimeZone(now, YEK_TIMEZONE);
                     sendDate.min = yekDateStr;
                     sendDate.value = yekDateStr;
-                    var hours = String(serverTimeYek.getHours()).padStart(2, '0');
-                    var minutes = String(serverTimeYek.getMinutes()).padStart(2, '0');
-                    sendTime.value = hours + ':' + minutes;
+                    sendTime.value = formatTimeHMInTimeZone(now, YEK_TIMEZONE);
                     return serverTimeYek;
                 }
             })
             .catch(function(error) {
                 console.error('Ошибка запроса времени сервера:', error);
-                // Fallback: используем текущее время браузера
+                // Fallback: используем текущее время браузера, но форматируем как ЕКБ (без "прибавить 5 часов")
                 var now = new Date();
-                serverTimeYek = new Date(now.getTime() + (5 * 3600000)); // UTC+5
-                var yekDateStr = serverTimeYek.toISOString().slice(0, 10);
+                serverTimeYek = now;
+                var yekDateStr = formatDateInTimeZone(now, YEK_TIMEZONE);
                 sendDate.min = yekDateStr;
                 sendDate.value = yekDateStr;
-                var hours = String(serverTimeYek.getHours()).padStart(2, '0');
-                var minutes = String(serverTimeYek.getMinutes()).padStart(2, '0');
-                sendTime.value = hours + ':' + minutes;
+                sendTime.value = formatTimeHMInTimeZone(now, YEK_TIMEZONE);
                 return serverTimeYek;
             });
     }
     
     // Загружаем время сервера при инициализации
-    getServerTime();
+    serverTimeYekPromise = getServerTime();
     
     // Функция валидации даты/времени (проверяем в ЕКБ)
-    function validateDateTime() {
-        if (sendDate.value && sendTime.value && serverTimeYek) {
-            // Создаем дату из введенных значений (интерпретируем как ЕКБ)
-            var selectedYekStr = sendDate.value + 'T' + sendTime.value + ':00+05:00';
-            var selectedYek = new Date(selectedYekStr);
-            
-            // Если выбранное время в прошлом (в ЕКБ), показываем ошибку
-            if (selectedYek < serverTimeYek) {
-                showError('Нельзя выбрать прошедшее время');
-                var sendPlanField = sendDate.closest('.field');
-                if (sendPlanField) {
-                    sendPlanField.classList.add('error');
+    async function validateDateTime() {
+        if (!sendDate.value || !sendTime.value) {
+            return true;
+        }
+        
+        // Гарантируем, что serverTimeYek заполнен до проверки (иначе можно обойти проверку "в прошлом")
+        if (!serverTimeYek) {
+            try {
+                if (serverTimeYekPromise) {
+                    await serverTimeYekPromise;
+                } else {
+                    serverTimeYekPromise = getServerTime();
+                    await serverTimeYekPromise;
                 }
-                return false;
-            } else {
-                // Убираем ошибку если время корректно
-                var sendPlanField = sendDate.closest('.field');
-                if (sendPlanField) {
-                    sendPlanField.classList.remove('error');
-                }
-                hideError();
+            } catch (e) {
+                // getServerTime() уже содержит fallback, но на всякий случай оставим защиту
             }
         }
+        
+        if (!serverTimeYek) {
+            showError('Подождите, загружаем текущее время…');
+            var sendPlanField = sendDate.closest('.field');
+            if (sendPlanField) {
+                sendPlanField.classList.add('error');
+            }
+            return false;
+        }
+        
+        // Создаем дату из введенных значений (интерпретируем как ЕКБ)
+        var selectedYekStr = sendDate.value + 'T' + sendTime.value + ':00+05:00';
+        var selectedYek = new Date(selectedYekStr);
+        
+        // Если выбранное время в прошлом (в ЕКБ), показываем ошибку
+        if (selectedYek < serverTimeYek) {
+            showError('Нельзя выбрать прошедшее время');
+            var sendPlanField = sendDate.closest('.field');
+            if (sendPlanField) {
+                sendPlanField.classList.add('error');
+            }
+            return false;
+        } else {
+            // Убираем ошибку если время корректно
+            var sendPlanField = sendDate.closest('.field');
+            if (sendPlanField) {
+                sendPlanField.classList.remove('error');
+            }
+            hideError();
+        }
+        
         return true;
     }
     
     // Добавляем обработчики для валидации
-    sendDate.addEventListener('change', validateDateTime);
-    sendTime.addEventListener('change', validateDateTime);
+    sendDate.addEventListener('change', function() { validateDateTime(); });
+    sendTime.addEventListener('change', function() { validateDateTime(); });
 
     // ======================================================
     // СНЯТИЕ ОШИБОК ПРИ ИСПРАВЛЕНИИ ПОЛЕЙ
@@ -718,13 +772,15 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        handleFormSubmit();
+        handleFormSubmit().catch(function(error) {
+            console.error('Gift-You: ошибка отправки формы', error);
+        });
     });
 
-    function handleFormSubmit() {
+    async function handleFormSubmit() {
         resetErrors();
 
-        if (!validateForm()) {
+        if (!await validateForm()) {
             return;
         }
 
@@ -764,7 +820,7 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
     // ВАЛИДАЦИЯ ФОРМЫ
     // ======================================================
 
-    function validateForm() {
+    async function validateForm() {
         var valid = true;
 
         // Проверка суммы
@@ -780,7 +836,7 @@ $is_test_mode = isset($_GET['test']) && $_GET['test'] === '1';
         // Валидация даты/времени планирования
         var planBtn = document.querySelector('.gift-wrap .send-btn[data-mode="plan"]');
         if (planBtn && planBtn.classList.contains('active')) {
-            if (!validateDateTime()) {
+            if (!await validateDateTime()) {
                 valid = false;
             }
         }
